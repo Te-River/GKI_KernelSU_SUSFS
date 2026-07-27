@@ -1,0 +1,105 @@
+name: Fast Test
+
+on:
+  workflow_dispatch:
+
+env:
+  PYTHON_VERSION: '3.10'
+  ANDROID: android14
+  KERNEL: 6.1
+  SUB_LEVEL: '138'
+  OS_PATCH: '2025-06'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Maximize build space
+        uses: AdityaGarg8/remove-unwanted-software@v5
+        with:
+          remove-dotnet: 'true'
+          remove-android: 'true'
+          remove-haskell: 'true'
+          remove-codeql: 'true'
+          remove-docker-images: 'true'
+          remove-large-packages: 'true'
+          remove-swapfile: 'true'
+          verbose: 'true'
+
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        run: |
+          sudo apt update && sudo apt upgrade -y
+          sudo apt install -y ccache python3 git curl wget zip unzip
+          pip install PyYAML
+
+      - name: Configure ccache
+        run: |
+          mkdir -p ~/.cache/bazel
+          ccache --version
+          ccache --max-size=2G
+          ccache --set-config=compression=true
+          echo "CCACHE_DIR=$HOME/.ccache" >> $GITHUB_ENV
+
+      - name: Restore ccache
+        uses: actions/cache@v5
+        with:
+          path: ~/.ccache
+          key: ${{ env.ANDROID }}-${{ env.KERNEL }}-${{ env.SUB_LEVEL }}-ccache-${{ github.sha }}
+          restore-keys: |
+            ${{ env.ANDROID }}-${{ env.KERNEL }}-${{ env.SUB_LEVEL }}-ccache-
+
+      - name: Build kernel
+        run: |
+          cd ./.github/workflows/scripts
+
+          ARGS="--android ${{ env.ANDROID }}"
+          ARGS="$ARGS --kernel ${{ env.KERNEL }}"
+          ARGS="$ARGS --sub-level ${{ env.SUB_LEVEL }}"
+          ARGS="$ARGS --os-patch ${{ env.OS_PATCH }}"
+          ARGS="$ARGS --zram --bbr"
+
+          python3 build.py $ARGS
+
+      - name: Prepare artifacts
+        run: |
+          mkdir -p artifacts
+          find /tmp/gki-build -name "*.zip" -type f -exec cp {} artifacts/ \;
+          find /tmp/gki-build -name "*.img" -type f -exec cp {} artifacts/ \;
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: kernel-${{ env.ANDROID }}-${{ env.KERNEL }}-${{ env.SUB_LEVEL }}
+          path: artifacts/*
+
+      - name: Generate checksums
+        run: |
+          echo "=== Creating checksums ==="
+          sha256sum artifacts/* > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+
+      - name: Send Telegram Notification
+        if: success()
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          TELEGRAM_MESSAGE_THREAD_ID: ${{ secrets.TELEGRAM_MESSAGE_THREAD_ID }}
+        run: |
+          cd ./.github/workflows/scripts
+          python3 telegram_notify.py single \
+            "${{ env.ANDROID }}" \
+            "${{ env.KERNEL }}" \
+            "${{ env.SUB_LEVEL }}" \
+            "${{ env.OS_PATCH }}" \
+            "Stable(标准)" \
+            "true" \
+            "true" \
+            "../../SHA256SUMS.txt"
