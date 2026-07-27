@@ -62,6 +62,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--ksu-version", choices=[v.value for v in KSUVersion], default=KSUVersion.STABLE.value)
     parser.add_argument("--ksu-commit", default=None)
     parser.add_argument("--susfs-commit", default=None)
+    parser.add_argument("--no-susfs", action="store_true")
     parser.add_argument("--zram", action="store_true")
     parser.add_argument("--no-kpm", action="store_true")
     parser.add_argument("--bbg", action="store_true")
@@ -91,6 +92,7 @@ def create_build_config(args: argparse.Namespace) -> BuildConfig:
         kernelsu_version=args.ksu_version,
         kernelsu_commit=args.ksu_commit,
         susfs_commit=args.susfs_commit,
+        use_susfs=not args.no_susfs,
         use_zram=args.zram,
         use_kpm=not args.no_kpm,
         use_bbg=args.bbg,
@@ -156,6 +158,8 @@ def build_matrix(matrix_key: str, args: argparse.Namespace, workspace: str) -> l
                 os_patch_level=cfg_data["os_patch_level"],
                 kernelsu_version=args.ksu_version,
                 kernelsu_commit=args.ksu_commit,
+                susfs_commit=args.susfs_commit,
+                use_susfs=not args.no_susfs,
                 use_zram=args.zram,
                 use_kpm=not args.no_kpm,
                 use_bbg=args.bbg,

@@ -62,7 +62,6 @@ class KernelBuilder:
 # === KernelSU Config ===
 CONFIG_KSU=y
 CONFIG_KPM=y
-CONFIG_KSU_SUSFS_SUS_SU=n
 
 # === TMPFS Config ===
 CONFIG_TMPFS_XATTR=y
@@ -80,7 +79,9 @@ CONFIG_NET_SCH_FQ=y
 CONFIG_TCP_CONG_BIC=n
 CONFIG_TCP_CONG_WESTWOOD=n
 CONFIG_TCP_CONG_HTCP=n
+"""
 
+    SUSFS_CONFIG = """
 # === SUSFS Config ===
 CONFIG_KSU_SUSFS=y
 CONFIG_KSU_SUSFS_SUS_MAP=y
@@ -143,12 +144,15 @@ CONFIG_KSU_SUSFS_OPEN_REDIRECT=y
 
     def clone_repositories(self):
         logger.info("=== 开始克隆仓库 ===")
-        for name, repo_dir, url, branch in [
-            ("SUSFS", self.susfs_dir, SUSFS_REPO_CONFIG['repo_url'], self.config.kernel_branch),
+        repos = []
+        if self.config.use_susfs:
+            repos.append(("SUSFS", self.susfs_dir, SUSFS_REPO_CONFIG['repo_url'], self.config.kernel_branch))
+        repos += [
             ("SukiSU Patch", self.sukisu_patch_dir, SUKISU_PATCH_REPO_CONFIG['repo_url'], None),
             ("AnyKernel3", self.anykernel_dir, ANYKERNEL_CONFIG['repo_url'], ANYKERNEL_CONFIG['branch']),
             ("Kernel Patches", self.kernel_patches_dir, KERNEL_PATCHES_CONFIG['repo_url'], None),
-        ]:
+        ]
+        for name, repo_dir, url, branch in repos:
             if not repo_dir.exists():
                 cmd = f"git clone {url}"
                 if branch:
@@ -378,10 +382,13 @@ CONFIG_KSU_SUSFS_OPEN_REDIRECT=y
 
         with open(config_file, "a") as f:
             f.write(self.KERNEL_CONFIG_TEMPLATE)
-            if self.config.kernel_version != "6.6":
-                f.write("CONFIG_KSU_SUSFS_SUS_PATH=y\n")
-            else:
-                f.write("CONFIG_KSU_SUSFS_SUS_PATH=n\n")
+            if self.config.use_susfs:
+                f.write(self.SUSFS_CONFIG)
+                f.write("CONFIG_KSU_SUSFS_SUS_SU=n\n")
+                if self.config.kernel_version != "6.6":
+                    f.write("CONFIG_KSU_SUSFS_SUS_PATH=y\n")
+                else:
+                    f.write("CONFIG_KSU_SUSFS_SUS_PATH=n\n")
 
         if self.config.use_zram:
             self._configure_zram()
@@ -734,9 +741,10 @@ CONFIG_KSU_SUSFS_OPEN_REDIRECT=y
             self.add_bbg()
             self._endgroup()
 
-            self._group("应用 SUSFS 补丁")
-            self.apply_susfs_patches()
-            self._endgroup()
+            if self.config.use_susfs:
+                self._group("应用 SUSFS 补丁")
+                self.apply_susfs_patches()
+                self._endgroup()
 
             self._group("应用 SukiSU 附加补丁")
             self.apply_sukisu_patches()
