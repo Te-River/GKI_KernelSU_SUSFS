@@ -321,14 +321,15 @@ CONFIG_KSU_SUSFS_OPEN_REDIRECT=y
             return
         logger.info("=== 应用 ZRAM (LZ4KD) 补丁 ===")
         self._chdir(self.work_dir / "common")
-        for src in [
-            (self.sukisu_patch_dir / "other/zram/lz4k/include/linux", "include/linux/"),
-            (self.sukisu_patch_dir / "other/zram/lz4k/lib", "lib/"),
-            (self.sukisu_patch_dir / "other/zram/lz4k/crypto", "crypto/"),
-            (self.sukisu_patch_dir / "other/zram/lz4k_oplus", "lib/"),
+        for src, no_clobber in [
+            (self.sukisu_patch_dir / "other/zram/lz4k/include/linux", "include/linux/", True),
+            (self.sukisu_patch_dir / "other/zram/lz4k/lib", "lib/", False),
+            (self.sukisu_patch_dir / "other/zram/lz4k/crypto", "crypto/", False),
+            (self.sukisu_patch_dir / "other/zram/lz4k_oplus", "lib/", False),
         ]:
             if src[0].exists():
-                self._run_cmd(f"cp -r -n {src[0]}/* {src[1]}", check=False)
+                cp_flags = "-r -n" if no_clobber else "-r"
+                self._run_cmd(f"cp {cp_flags} {src[0]}/* {src[1]}", check=False)
         zram_patch_dir = self.sukisu_patch_dir / f"other/zram/zram_patch/{self.config.kernel_version}"
         for patch in ["lz4kd.patch", "lz4k_oplus.patch"]:
             p = zram_patch_dir / patch
