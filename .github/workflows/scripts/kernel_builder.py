@@ -404,11 +404,33 @@ CONFIG_KSU_SUSFS_OPEN_REDIRECT=y
             with open(config_file, "a") as f:
                 f.write("CONFIG_DEFAULT_BBR=y\n")
 
+        # 通过 POST_DEFCONFIG_CMDS 强制设置配置项（穿透 Bazel 沙箱）
         build_config = self.work_dir / "common/build.config.gki"
         if build_config.exists():
             with open(build_config, "r") as f:
                 content = f.read()
-            content = content.replace("check_defconfig", "")
+
+            # 收集所有需要强制写入的 CONFIG_*
+            forced = []
+            for line in self.KERNEL_CONFIG_TEMPLATE.split('\n'):
+                line = line.strip()
+                if line.startswith('CONFIG_') or line.startswith('# CONFIG_'):
+                    forced.append(line)
+            if self.config.use_susfs:
+                for line in self.SUSFS_CONFIG.split('\n'):
+                    line = line.strip()
+                    if line.startswith('CONFIG_') or line.startswith('# CONFIG_'):
+                        forced.append(line)
+                forced.append("CONFIG_KSU_SUSFS_SUS_SU=n")
+                forced.append("CONFIG_KSU_SUSFS_SUS_PATH=y" if self.config.kernel_version != "6.6" else "CONFIG_KSU_SUSFS_SUS_PATH=n")
+            if self.config.set_default_bbr:
+                forced.append("CONFIG_DEFAULT_BBR=y")
+
+            cmds = " && ".join(f"echo '{c}' >> ${{OUT_DIR}}/.config" for c in forced)
+            content = content.replace(
+                'POST_DEFCONFIG_CMDS="check_defconfig"',
+                f'POST_DEFCONFIG_CMDS="{cmds}"',
+            )
             with open(build_config, "w") as f:
                 f.write(content)
 
