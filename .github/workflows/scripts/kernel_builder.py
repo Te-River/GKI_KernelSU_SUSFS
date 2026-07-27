@@ -328,7 +328,7 @@ CONFIG_KSU_SUSFS_OPEN_REDIRECT=y
             (self.sukisu_patch_dir / "other/zram/lz4k_oplus", "lib/"),
         ]:
             if src[0].exists():
-                self._run_cmd(f"cp -r {src[0]}/* {src[1]}", check=False)
+                self._run_cmd(f"cp -r -n {src[0]}/* {src[1]}", check=False)
         zram_patch_dir = self.sukisu_patch_dir / f"other/zram/zram_patch/{self.config.kernel_version}"
         for patch in ["lz4kd.patch", "lz4k_oplus.patch"]:
             p = zram_patch_dir / patch
