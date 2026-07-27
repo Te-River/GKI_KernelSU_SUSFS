@@ -296,12 +296,13 @@ CONFIG_KSU_SUSFS_OPEN_REDIRECT=y
         susfs_patch = self.susfs_dir / "kernel_patches" / self.config.get_susfs_patch_filename()
         if susfs_patch.exists():
             self._run_cmd(f"cp {susfs_patch} {common_dir}/", check=False)
-        for src, dst in [
-            (self.susfs_dir / "kernel_patches/fs", common_dir / "fs/"),
-            (self.susfs_dir / "kernel_patches/include/linux", common_dir / "include/linux/"),
+        for src, dst, no_clobber in [
+            (self.susfs_dir / "kernel_patches/fs", common_dir / "fs/", False),
+            (self.susfs_dir / "kernel_patches/include/linux", common_dir / "include/linux/", True),
         ]:
             if src.exists():
-                self._run_cmd(f"cp -r {src}/* {dst}", check=False)
+                cp_flags = "-r -n" if no_clobber else "-r"
+                self._run_cmd(f"cp {cp_flags} {src}/* {dst}", check=False)
         if susfs_patch.exists():
             patch_file = common_dir / self.config.get_susfs_patch_filename()
             if patch_file.exists():
