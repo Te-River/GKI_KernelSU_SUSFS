@@ -104,7 +104,7 @@ class BuildConfig:
     os_patch_level: str
     kernelsu_version: str = "Stable(标准)"
     kernelsu_commit: Optional[str] = None
-    use_susfs: bool = True
+    use_susfs: bool = False
     susfs_commit: Optional[str] = None
     use_zram: bool = False
     use_kpm: bool = True
