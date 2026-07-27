@@ -65,6 +65,7 @@ CONFIG_KPM=y
 
 # === Security/Key Config ===
 CONFIG_ASSOCIATIVE_ARRAY=y
+CONFIG_GENERIC_IOREMAP=y
 
 # === TMPFS Config ===
 CONFIG_TMPFS_XATTR=y
