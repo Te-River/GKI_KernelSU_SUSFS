@@ -687,6 +687,13 @@ CONFIG_KSU_SUSFS_OPEN_REDIRECT=y
             self._chdir(self.work_dir)
         return artifacts
 
+    def _group(self, name: str):
+        """输出 GitHub Actions 折叠分组"""
+        print(f"\n::group::=== {name} ===")
+
+    def _endgroup(self):
+        print("::endgroup::")
+
     def build(self) -> BuildResult:
         import time
         start_time = time.time()
@@ -695,28 +702,79 @@ CONFIG_KSU_SUSFS_OPEN_REDIRECT=y
         logger.info("=" * 50)
 
         try:
+            self._group("克隆仓库")
             self.clone_repositories()
-            self.clone_toolchain()
-            self.setup_repo_tool()
-            self.init_and_sync_kernel()
-            self.add_kernel_supatch()
-            self.add_kernelsu()
-            self.add_bbg()
-            self.apply_susfs_patches()
-            self.apply_sukisu_patches()
-            self.apply_zram_patches()
-            self.apply_task_mmu_fixes()
-            self.configure_kernel()
-            self.configure_kernel_name()
-            self.show_kernel_config()
+            self._endgroup()
 
+            self._group("克隆工具链")
+            self.clone_toolchain()
+            self._endgroup()
+
+            self._group("安装 repo 工具")
+            self.setup_repo_tool()
+            self._endgroup()
+
+            self._group("同步内核源码")
+            self.init_and_sync_kernel()
+            self._endgroup()
+
+            self._group("添加 KernelSU 补丁")
+            self.add_kernel_supatch()
+            self._endgroup()
+
+            self._group("添加 SukiSU-Ultra")
+            self.add_kernelsu()
+            self._endgroup()
+
+            self._group("添加 Baseband-guard")
+            self.add_bbg()
+            self._endgroup()
+
+            self._group("应用 SUSFS 补丁")
+            self.apply_susfs_patches()
+            self._endgroup()
+
+            self._group("应用 SukiSU 附加补丁")
+            self.apply_sukisu_patches()
+            self._endgroup()
+
+            self._group("应用 ZRAM 补丁")
+            self.apply_zram_patches()
+            self._endgroup()
+
+            self._group("应用 Task MMU 修复")
+            self.apply_task_mmu_fixes()
+            self._endgroup()
+
+            self._group("配置内核选项")
+            self.configure_kernel()
+            self._endgroup()
+
+            self._group("配置内核名称")
+            self.configure_kernel_name()
+            self._endgroup()
+
+            self._group("内核配置概览")
+            self.show_kernel_config()
+            self._endgroup()
+
+            self._group("编译内核")
             if not self.build_kernel():
                 return BuildResult(success=False, config=self.config, message="内核编译失败", build_time=time.time() - start_time)
+            self._endgroup()
 
+            self._group("修补 KPM 镜像")
             self.patch_kpm_image()
+            self._endgroup()
+
+            self._group("准备 boot.img")
             artifacts = []
             artifacts.extend(self.prepare_boot_images())
+            self._endgroup()
+
+            self._group("打包 AnyKernel3")
             artifacts.extend(self.create_anykernel_zips())
+            self._endgroup()
 
             build_time = time.time() - start_time
             logger.info(f"构建成功! 耗时: {build_time:.2f} 秒, 生成 {len(artifacts)} 个产物")
