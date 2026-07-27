@@ -540,7 +540,14 @@ CONFIG_KSU_SUSFS_OPEN_REDIRECT=y
             if f.exists():
                 with open(f) as fh:
                     lines = fh.readlines()
-                logger.info(f"  [{rel_path}] {len(lines)} 行, 前3行: {[l.rstrip() for l in lines[:3]]}")
+                logger.info(f"  [{rel_path}] {len(lines)} 行")
+                # 检查关键内容
+                for keyword in ["assoc_array.h", "struct assoc_array", "ioremap_prot", "ioremap("]:
+                    found = [i+1 for i, l in enumerate(lines) if keyword in l]
+                    if found:
+                        logger.info(f"    '{keyword}' 出现在行: {found[:5]}")
+                    else:
+                        logger.warning(f"    '{keyword}' 未找到!")
             else:
                 logger.warning(f"  [{rel_path}] 文件不存在!")
 
