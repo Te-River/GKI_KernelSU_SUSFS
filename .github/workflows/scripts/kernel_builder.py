@@ -63,6 +63,9 @@ class KernelBuilder:
 CONFIG_KSU=y
 CONFIG_KPM=y
 
+# === Security/Key Config ===
+CONFIG_ASSOCIATIVE_ARRAY=y
+
 # === TMPFS Config ===
 CONFIG_TMPFS_XATTR=y
 CONFIG_TMPFS_POSIX_ACL=y
