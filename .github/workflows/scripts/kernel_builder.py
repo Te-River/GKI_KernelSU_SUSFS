@@ -275,9 +275,13 @@ CONFIG_KSU_SUSFS_OPEN_REDIRECT=y
         if kconfig_file.exists():
             with open(kconfig_file, "r") as f:
                 content = f.read()
-            content = re.sub(r'(config LSM.*?)(default .*)(\n.*?help)',
-                           lambda m: m.group(1) + ('lockdown,baseband_guard' if 'lockdown' in m.group(2) and 'baseband_guard' not in m.group(2) else m.group(2)) + m.group(3),
-                           content, flags=re.DOTALL)
+            content = re.sub(
+                r'(config LSM\s*\n(?:.*\n)*?\s+default\s+)"([^"]*)"(\s*\n(?:.*\n)*?\s+help\b)',
+                lambda m: m.group(1) + '"' +
+                          (m.group(2) + ',baseband_guard' if 'lockdown' in m.group(2) and 'baseband_guard' not in m.group(2) else m.group(2))
+                          + '"' + m.group(3),
+                content,
+            )
             with open(kconfig_file, "w") as f:
                 f.write(content)
 
