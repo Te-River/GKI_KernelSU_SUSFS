@@ -434,10 +434,10 @@ CONFIG_KSU_SUSFS_OPEN_REDIRECT=y
             if self.config.set_default_bbr:
                 forced.append("CONFIG_DEFAULT_BBR=y")
 
-            cmds = " && ".join(f"echo '{c}' >> ${{OUT_DIR}}/.config" for c in forced)
+            cmds = " && ".join(f'echo "{c}" >> ${{OUT_DIR}}/.config' for c in forced)
             content = content.replace(
                 'POST_DEFCONFIG_CMDS="check_defconfig"',
-                f'POST_DEFCONFIG_CMDS="{cmds}"',
+                f"POST_DEFCONFIG_CMDS='{cmds}'",
             )
             with open(build_config, "w") as f:
                 f.write(content)
