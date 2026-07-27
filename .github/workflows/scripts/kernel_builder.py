@@ -530,7 +530,19 @@ CONFIG_KSU_SUSFS_OPEN_REDIRECT=y
         logger.info("=== 显示内核配置列表 ===")
         self._chdir(self.work_dir)
         config_file = self.work_dir / "common/arch/arm64/configs/gki_defconfig"
-        
+
+        # 调试：检查有问题的头文件内容
+        common_dir = self.work_dir / "common"
+        for rel_path in ["include/linux/key.h", "include/linux/assoc_array.h",
+                         "include/linux/io.h", "arch/arm64/include/asm/io.h"]:
+            f = common_dir / rel_path
+            if f.exists():
+                with open(f) as fh:
+                    lines = fh.readlines()
+                logger.info(f"  [{rel_path}] {len(lines)} 行, 前3行: {[l.rstrip() for l in lines[:3]]}")
+            else:
+                logger.warning(f"  [{rel_path}] 文件不存在!")
+
         if not config_file.exists():
             logger.warning(f"配置文件不存在: {config_file}")
             return
