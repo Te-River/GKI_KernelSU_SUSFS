@@ -312,6 +312,14 @@ CONFIG_KSU_SUSFS_OPEN_REDIRECT=y
             if patch_file.exists():
                 self._chdir(common_dir)
                 self._run_cmd(f"patch -p1 --fuzz=3 < {patch_file}", check=False)
+                # SUSFS 补丁会误改 key.h / io.h 等通用头文件，导致 GKI 编译失败，
+                # 打完补丁后立即从内核仓库还原这些头文件，只保留 susfs.h 等新增文件。
+                logger.info("还原被 SUSFS 误改的内核头文件: key.h, io.h, assoc_array.h, asm/io.h")
+                self._run_cmd(
+                    "git checkout -- include/linux/key.h include/linux/io.h "
+                    "include/linux/assoc_array.h arch/arm64/include/asm/io.h",
+                    check=False,
+                )
                 self._chdir(self.work_dir)
 
     def apply_sukisu_patches(self):

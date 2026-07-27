@@ -43,11 +43,19 @@ python build.py --dry-run --all          # 验证配置，不实际构建
 
 8. **构建工作目录**：默认 `/tmp/gki-build`，可通过 `GKI_WORKSPACE` 环境变量覆盖。
 
+9. **新版 repo 废弃 `--u` 短选项**：`repo init` 的 `--u` 与 `--use-local-gitdirs`/`--use-superproject` 冲突，必须使用 `--manifest-url`。
+
+10. **`add_bbg()` 正则曾破坏 `security/Kconfig`**：旧版 BBG 正则使用 `re.DOTALL` 导致跨 Kconfig 块乱匹配，且直接用 `'lockdown,baseband_guard'` 替换整个 `default` 值丢弃了其他 LSM。已修复为按行匹配 + 追加。
+
+11. **ZRAM 和 SUSFS 都曾用 `cp -r` 覆盖 `include/linux/`**：两个模块都直接 `cp -r {patch}/include/linux/*` 到内核源码，覆盖了 `key.h`、`io.h` 等头文件，导致编译失败。ZRAM 的 `include/linux/` 已改为 `cp -r -n` 仅复制新文件；SUSFS 在打补丁后会通过 `git checkout --` 还原 `include/linux/key.h`、`include/linux/io.h`、`include/linux/assoc_array.h`、`arch/arm64/include/asm/io.h`，只保留 `susfs.h` 等新增头文件。
+
+12. **`use_susfs` 自动跳过**：不填 `susfs_commit` 时 `use_susfs` 自动为 `False`，无需额外传 `--no-susfs`。显式传 `--no-susfs` 可覆盖。
+
 ## 架构流水线（`KernelBuilder.build()`）
 
-`clone_repos → clone_toolchain → setup_repo → init_and_sync_kernel → add_kernelsu → add_bbg → apply_susfs_patches → apply_sukisu_patches → apply_zram_patches → apply_task_mmu_fixes → configure_kernel → configure_kernel_name → show_kernel_config → build_kernel → patch_kpm_image → prepare_boot_images → create_anykernel_zips`
+`clone_repos → clone_toolchain → setup_repo → init_and_sync_kernel → add_kernelsu → add_bbg → apply_susfs_patches (条件) → apply_sukisu_patches → apply_zram_patches (条件) → apply_task_mmu_fixes → configure_kernel → configure_kernel_name → show_kernel_config → build_kernel → patch_kpm_image → prepare_boot_images → create_anykernel_zips`
 
-每个步骤都是可选的/条件性的——`use_zram`、`use_kpm`、`use_bbg` 等布尔配置控制哪些步骤实际执行。
+每个步骤都是可选的/条件性的——`use_zram`、`use_kpm`、`use_bbg`、`use_susfs` 等布尔配置控制哪些步骤实际执行。
 
 ## 支持的版本组合
 
